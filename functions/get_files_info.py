@@ -8,12 +8,11 @@ def get_files_info(working_directory, directory="."):
         #get the full path and check it's in the correct working dir
         fullpath = os.path.join(working_directory, directory)
         fullpath = os.path.abspath(fullpath)
-        if not os.path.isdir(fullpath):
-            return f'Error: "{directory}" is not a directory'
         if not fullpath.startswith(os.path.abspath(working_directory)):
             return f'Error: Cannot list "{directory}" as it is outside the permitted working directory'
-
-        # get the contents of directory
+        if not os.path.isdir(fullpath):
+            return f'Error: "{directory}" is not a directory'
+       # get the contents of directory
         dirlisting = os.listdir(fullpath)
         filelist = ''
         for file in dirlisting:
@@ -24,4 +23,4 @@ def get_files_info(working_directory, directory="."):
         return filelist
 
     except Exception as errmes:
-        return f"An unexpected error occured: {errmes}"
+        return f"Error: {errmes}"
