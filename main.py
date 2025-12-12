@@ -1,5 +1,6 @@
 import os
 import argparse
+import prompts
 
 from dotenv import load_dotenv
 from google import genai
@@ -8,8 +9,6 @@ from google.genai import types
 model = "gemini-2.5-flash"
 
 def main():
-    print("hello ai agent")
-
 
     load_dotenv()
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -27,7 +26,9 @@ def main():
     messages = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
 
     response = client.models.generate_content(
-            model=model, contents=messages)
+            model=model, contents=messages,
+            config=types.GenerateContentConfig(system_instruction=prompts.system_prompt),
+    )
 
     if response.usage_metadata == None:
         raise RuntimeError("no api response")
@@ -36,6 +37,7 @@ def main():
     if args.verbose:
         print(f'User prompt: {args.user_prompt}')
         print(f'Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}')
+    print("Response:")
     print(response.text)
 
 if __name__ == "__main__":
