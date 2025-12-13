@@ -1,12 +1,31 @@
 import os
 import argparse
-import prompts
 
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from prompts import system_prompt
+
 model = "gemini-2.5-flash"
+
+
+def generate_content(client, messages, verbose):
+
+    response = client.models.generate_content(
+            model=model, contents=messages,
+            config=types.GenerateContentConfig(system_instruction=system_prompt),
+    )
+
+    if response.usage_metadata == None:
+        raise RuntimeError("no api response")
+    prompt_tokens = response.usage_metadata.prompt_token_count
+    response_tokens = response.usage_metadata.candidates_token_count
+    if verbose:
+        print(f'Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}')
+    print("Response:")
+    print(response.text)
+
 
 def main():
 
@@ -24,21 +43,10 @@ def main():
     # Now we can access `args.user_prompt`
 
     messages = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
-
-    response = client.models.generate_content(
-            model=model, contents=messages,
-            config=types.GenerateContentConfig(system_instruction=prompts.system_prompt),
-    )
-
-    if response.usage_metadata == None:
-        raise RuntimeError("no api response")
-    prompt_tokens = response.usage_metadata.prompt_token_count
-    response_tokens = response.usage_metadata.candidates_token_count
     if args.verbose:
-        print(f'User prompt: {args.user_prompt}')
-        print(f'Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}')
-    print("Response:")
-    print(response.text)
+        print(f"User prompt: {args.user_prompt}\n")
+
+    generate_content(client, messages, args.verbose)
 
 if __name__ == "__main__":
     main()
