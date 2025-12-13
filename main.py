@@ -6,15 +6,20 @@ from google import genai
 from google.genai import types
 
 from prompts import system_prompt
+from functions.get_files_info import schema_get_files_info
 
 model = "gemini-2.5-flash"
-
+available_functions = types.Tool(
+        function_declarations=[schema_get_files_info],
+)
 
 def generate_content(client, messages, verbose):
 
     response = client.models.generate_content(
             model=model, contents=messages,
-            config=types.GenerateContentConfig(system_instruction=system_prompt),
+            config=types.GenerateContentConfig(
+                tools=[available_functions],
+                system_instruction=system_prompt),
     )
 
     if response.usage_metadata == None:
@@ -24,7 +29,11 @@ def generate_content(client, messages, verbose):
     if verbose:
         print(f'Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}')
     print("Response:")
-    print(response.text)
+    if response.function_calls:
+        for call in response.function_calls:
+            print(f"Calling function: {call.name}({call.args})")
+    if response.text:
+        print(response.text)
 
 
 def main():
