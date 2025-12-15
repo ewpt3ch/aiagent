@@ -10,6 +10,7 @@ from functions.get_files_info import schema_get_files_info
 from functions.get_file_content import schema_get_file_content
 from functions.write_file import schema_write_file
 from functions.run_python_file import schema_run_python_file
+from functions.call_function import call_function
 
 
 model = "gemini-2.5-flash"
@@ -32,12 +33,19 @@ def generate_content(client, messages, verbose):
         raise RuntimeError("no api response")
     prompt_tokens = response.usage_metadata.prompt_token_count
     response_tokens = response.usage_metadata.candidates_token_count
-    if verbose:
-        print(f'Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}')
     print("Response:")
+    results_list = []
+    if verbose:
+        print(f"Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}")
     if response.function_calls:
         for call in response.function_calls:
             print(f"Calling function: {call.name}({call.args})")
+            function_result = call_function(call)
+            if not function_result.parts[0].function_response.response:
+                raise Exception("fatal function didn't return")
+            results_list.append(function_result.parts[0])
+            if verbose:
+                print(f"-> {function_result.parts[0].function_response.response}")
     else:
         print(response.text)
 
