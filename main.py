@@ -49,6 +49,8 @@ def generate_content(client, messages, verbose):
     else:
         print(response.text)
 
+    return response
+
 
 def main():
 
@@ -69,7 +71,11 @@ def main():
     if args.verbose:
         print(f"User prompt: {args.user_prompt}\n")
 
-    generate_content(client, messages, args.verbose)
+    loop:
+
+        response = generate_content(client, messages, args.verbose)
+        for candidate in response.candidates:
+            messages.append(candidate.content)
 
 if __name__ == "__main__":
     main()
