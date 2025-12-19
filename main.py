@@ -1,5 +1,6 @@
 import os
 import argparse
+import sys
 
 from dotenv import load_dotenv
 from google import genai
@@ -29,7 +30,7 @@ def generate_content(client, messages, verbose):
                 system_instruction=system_prompt),
     )
 
-    if response.usage_metadata == None:
+    if not response.usage_metadata:
         raise RuntimeError("no api response")
     prompt_tokens = response.usage_metadata.prompt_token_count
     response_tokens = response.usage_metadata.candidates_token_count
@@ -37,20 +38,27 @@ def generate_content(client, messages, verbose):
     results_list = []
     if verbose:
         print(f"Prompt tokens: {prompt_tokens}\nResponse tokens: {response_tokens}")
-    if response.function_calls:
-        for call in response.function_calls:
-            print(f"Calling function: {call.name}({call.args})")
-            function_result = call_function(call)
-            if not function_result.parts[0].function_response.response:
-                raise Exception("fatal function didn't return")
-            results_list.append(function_result.parts[0])
-            if verbose:
-                print(f"-> {function_result.parts[0].function_response.response}")
-    else:
-        print(response.text)
+    if response.candidates:
+        for candidate in response.candidates:
+            function_call_content = candidate.content
+            messages.append(function_call_content)
 
-    return response
+    if not response.function_calls:
+        return response.text
 
+    for function_call in response.function_calls:
+        result = call_function(function_call, verbose)
+        if (
+            not result.parts
+            or not result.parts[0].function_response
+            or not result.parts[0].function_response.response
+        ):
+            raise RuntimeError(f"Empty function response for {function_call.name}")
+        if verbose:
+            print(f"-> {result.parts[0].function_response.response}")
+        results_list.append(result.parts[0])
+
+    messages.append(types.Content(role="user", parts=results_list))
 
 def main():
 
@@ -73,25 +81,20 @@ def main():
 
     # initialize the loop
     iteration = 0
-    going = True
 
-    while going:
+    while True:
         iteration += 1
         print(iteration)
         if iteration >= 20:
-            going = False
+            print("Max iterations reached")
+            sys.exit(1)
 
         try:
             response = generate_content(client, messages, args.verbose)
-            for candidate in response.candidates:
-
-                if not candidate and response.text:
-                    print(response.text)
-                    break
-
-                messages.append([candidate.content])
-                messages.append([types.Content(role="user", parts=[types.Part(text=response.function_result)])])
-
+            if response:
+                print("Final Response:")
+                print(response)
+                break
 
         except Exception as errmes:
             return f"Error: {errmes}"
