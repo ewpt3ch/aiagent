@@ -71,11 +71,30 @@ def main():
     if args.verbose:
         print(f"User prompt: {args.user_prompt}\n")
 
-    loop:
+    # initialize the loop
+    iteration = 0
+    going = True
 
-        response = generate_content(client, messages, args.verbose)
-        for candidate in response.candidates:
-            messages.append(candidate.content)
+    while going:
+        iteration += 1
+        print(iteration)
+        if iteration >= 20:
+            going = False
+
+        try:
+            response = generate_content(client, messages, args.verbose)
+            for candidate in response.candidates:
+
+                if not candidate and response.text:
+                    print(response.text)
+                    break
+
+                messages.append([candidate.content])
+                messages.append([types.Content(role="user", parts=[types.Part(text=response.function_result)])])
+
+
+        except Exception as errmes:
+            return f"Error: {errmes}"
 
 if __name__ == "__main__":
     main()
